@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glass Table Puzzle</title>
+  <style>
+    :root {
+      --bg1: #08111f;
+      --bg2: #132238;
+      --card: rgba(255, 255, 255, 0.09);
+      --card-strong: rgba(255, 255, 255, 0.14);
+      --border: rgba(255, 255, 255, 0.18);
+      --text: #eef4ff;
+      --muted: rgba(238, 244, 255, 0.72);
+      --accent: #7dd3fc;
+      --accent-2: #a78bfa;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --danger: #fb7185;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(125, 211, 252, 0.18), transparent 34%),
+        radial-gradient(circle at top right, rgba(167, 139, 250, 0.16), transparent 28%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .app {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 880px) {
+      .app { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 22px 22px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(135deg, rgba(125, 211, 252, 0.12), rgba(167, 139, 250, 0.10));
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 2.4vw, 2.2rem);
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--muted);
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.98rem;
+    }
+
+    .game-area {
+      padding: 20px;
+    }
+
+    .table-shell {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      width: min(100%, 560px);
+      margin: 0 auto;
+      border-radius: 36px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.12), rgba(255,255,255,0.03) 54%, rgba(255,255,255,0.02) 100%),
+        linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .board {
+      position: absolute;
+      inset: 18px;
+      transition: transform 600ms cubic-bezier(.2,.8,.2,1), filter 300ms ease;
+      will-change: transform;
+    }
+
+    .board.rotating {
+      filter: blur(0.5px) saturate(1.05);
+    }
+
+    .slot {
+      position: absolute;
+      width: 38%;
+      height: 38%;
+      display: grid;
+      place-items: center;
+      user-select: none;
+    }
+
+    .slot.tl { left: 0; top: 0; }
+    .slot.tr { right: 0; top: 0; }
+    .slot.br { right: 0; bottom: 0; }
+    .slot.bl { left: 0; bottom: 0; }
+
+    .glass {
+      width: min(100%, 140px);
+      aspect-ratio: 0.78 / 1;
+      border-radius: 22px 22px 30px 30px;
+      position: relative;
+      transform-origin: center;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow:
+        0 18px 38px rgba(0,0,0,0.24),
+        inset 0 1px 0 rgba(255,255,255,0.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.07)),
+        radial-gradient(circle at 35% 25%, rgba(255,255,255,0.30), transparent 35%),
+        linear-gradient(180deg, rgba(125,211,252,0.10), rgba(167,139,250,0.08));
+      transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease, outline-color 180ms ease;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+    }
+
+    .glass:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        0 22px 44px rgba(0,0,0,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.16);
+    }
+
+    .glass.disabled {
+      cursor: not-allowed;
+      opacity: 0.82;
+    }
+
+    .glass.selected {
+      outline: 3px solid rgba(125, 211, 252, 0.9);
+      outline-offset: 4px;
+    }
+
+    .glass.revealed {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.12)),
+        radial-gradient(circle at 35% 22%, rgba(255,255,255,0.32), transparent 35%),
+        linear-gradient(180deg, rgba(125,211,252,0.16), rgba(167,139,250,0.12));
+    }
+
+    .glass .icon {
+      font-size: clamp(2.1rem, 4vw, 3.3rem);
+      line-height: 1;
+      text-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }
+
+    .glass .label {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(238,244,255,0.68);
+      pointer-events: none;
+    }
+
+    .center-ring {
+      position: absolute;
+      inset: 30% 30%;
+      border-radius: 50%;
+      border: 1px dashed rgba(255,255,255,0.12);
+      display: grid;
+      place-items: center;
+      color: rgba(255,255,255,0.55);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 14px;
+      letter-spacing: 0.03em;
+    }
+
+    .side {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .stat .k {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+    }
+
+    .stat .v {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(125,211,252,0.22), rgba(167,139,250,0.22));
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.16);
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    button.secondary {
+      background: rgba(255,255,255,0.08);
+    }
+    button.good {
+      background: linear-gradient(135deg, rgba(52,211,153,0.28), rgba(125,211,252,0.18));
+    }
+
+    .hint-box {
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.96rem;
+    }
+
+    .log {
+      max-height: 230px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .log ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .win-banner {
+      display: none;
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(52,211,153,0.26), rgba(125,211,252,0.18));
+      border: 1px solid rgba(52,211,153,0.24);
+      color: #eafff7;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .win-banner.show { display: block; }
+
+    .small {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .footer-note {
+      padding: 0 18px 18px;
+      color: rgba(238,244,255,0.60);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="panel">
+      <div class="header">
+        <div class="title">
+          <h1>Glass Table Puzzle</h1>
+          <div class="badge">Hidden state · 2 touches max · secret rotation</div>
+        </div>
+        <p class="subtitle">
+          Inspect up to two glasses, flip any inspected glass you choose, then end the turn. After each turn the table rotates by a random multiple of 90° without revealing the amount.
+        </p>
+      </div>
+
+      <div class="game-area">
+        <div class="table-shell">
+          <div class="board" id="board" aria-label="Game board">
+            <div class="slot tl"><div class="glass" data-slot="0"></div></div>
+            <div class="slot tr"><div class="glass" data-slot="1"></div></div>
+            <div class="slot br"><div class="glass" data-slot="2"></div></div>
+            <div class="slot bl"><div class="glass" data-slot="3"></div></div>
+            <div class="center-ring">Square table<br/>Rotate to scramble</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note">
+        This version is pure client-side logic. You can host it as <strong>index.html</strong> on GitHub Pages with no backend.
+      </div>
+    </section>
+
+    <aside class="panel side">
+      <div class="stat-grid">
+        <div class="stat"><div class="k">Turn</div><div class="v" id="turnValue">1</div></div>
+        <div class="stat"><div class="k">Touches left</div><div class="v" id="touchesLeft">2</div></div>
+        <div class="stat"><div class="k">Selected cups</div><div class="v" id="selectedCount">0</div></div>
+        <div class="stat"><div class="k">State</div><div class="v" id="statusValue">Playing</div></div>
+      </div>
+
+      <div class="controls">
+        <button id="endTurnBtn" class="good">End turn & rotate</button>
+        <button id="newGameBtn" class="secondary">New game</button>
+      </div>
+
+      <div class="win-banner" id="winBanner">
+        You won. All four glasses are now in the same orientation.
+      </div>
+
+      <div class="hint-box">
+        Click a covered glass to inspect it. That counts as one of your two touches this turn. Once inspected, click it again to flip it or leave it as is.
+      </div>
+
+      <div class="hint-box small">
+        Fair-play rules built in:
+        <br>• The start state is random, but never all-up or all-down.
+        <br>• The table rotation is stored internally and applied honestly.
+        <br>• The game only checks the actual hidden state, not what is visible on screen.
+      </div>
+
+      <div class="hint-box log">
+        <strong>Move log</strong>
+        <ul id="logList"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    (() => {
+      const board = document.getElementById('board');
+      const glassEls = [...document.querySelectorAll('.glass')];
+      const turnValue = document.getElementById('turnValue');
+      const touchesLeft = document.getElementById('touchesLeft');
+      const selectedCount = document.getElementById('selectedCount');
+      const statusValue = document.getElementById('statusValue');
+      const winBanner = document.getElementById('winBanner');
+      const logList = document.getElementById('logList');
+      const endTurnBtn = document.getElementById('endTurnBtn');
+      const newGameBtn = document.getElementById('newGameBtn');
+
+      const state = {
+        cups: [0, 0, 0, 0], // 0 = up, 1 = down
+        revealed: new Set(),
+        selected: new Set(),
+        touchesUsed: 0,
+        turn: 1,
+        rotation: 0,
+        gameOver: false,
+      };
+
+      const slotNames = ['NW', 'NE', 'SE', 'SW'];
+      const iconFor = (v) => (v === 0 ? '☝' : '☟');
+      const textFor = (v) => (v === 0 ? 'up' : 'down');
+
+      function randInt(maxExclusive) {
+        if (window.crypto && crypto.getRandomValues) {
+          const arr = new Uint32Array(1);
+          crypto.getRandomValues(arr);
+          return arr[0] % maxExclusive;
+        }
+        return Math.floor(Math.random() * maxExclusive);
+      }
+
+      function shuffleInitialState() {
+        const options = [];
+        for (let mask = 0; mask < 16; mask++) {
+          const bits = [(mask >> 0) & 1, (mask >> 1) & 1, (mask >> 2) & 1, (mask >> 3) & 1];
+          const allSame = bits.every(v => v === bits[0]);
+          if (!allSame) options.push(bits);
+        }
+        const picked = options[randInt(options.length)];
+        state.cups = [...picked];
+      }
+
+      function physicalIndexFromSlot(slotIndex) {
+        return slotIndex;
+      }
+
+      function updateBoardTransform() {
+        board.style.transform = `rotate(${state.rotation * 90}deg)`;
+      }
+
+      function render() {
+        glassEls.forEach((el, slotIndex) => {
+          const physIndex = physicalIndexFromSlot(slotIndex);
+          const orientation = state.cups[physIndex];
+          const revealed = state.revealed.has(physIndex);
+          const selected = state.selected.has(physIndex);
+          const isLocked = state.gameOver || (state.touchesUsed >= 2 && !selected);
+
+          el.innerHTML = revealed || state.gameOver
+            ? `<div class="icon" aria-hidden="true">${iconFor(orientation)}</div>
+               <div class="label">${slotNames[slotIndex]} · ${textFor(orientation)}</div>`
+            : `<div class="icon" aria-hidden="true">?</div>
+               <div class="label">${slotNames[slotIndex]} · hidden</div>`;
+
+          el.classList.toggle('revealed', revealed || state.gameOver);
+          el.classList.toggle('selected', selected);
+          el.classList.toggle('disabled', isLocked || (!selected && state.touchesUsed >= 2));
+          el.setAttribute('aria-label', `${slotNames[slotIndex]} glass, ${revealed || state.gameOver ? textFor(orientation) : 'hidden'}`);
+        });
+
+        turnValue.textContent = state.turn;
+        touchesLeft.textContent = Math.max(0, 2 - state.touchesUsed);
+        selectedCount.textContent = state.selected.size;
+        statusValue.textContent = state.gameOver ? 'Won' : (state.touchesUsed >= 2 ? 'Rotate' : 'Playing');
+        endTurnBtn.disabled = state.gameOver;
+        newGameBtn.disabled = false;
+        winBanner.classList.toggle('show', state.gameOver);
+        updateBoardTransform();
+      }
+
+      function log(message) {
+        const item = document.createElement('li');
+        item.textContent = message;
+        logList.prepend(item);
+      }
+
+      function clearTurnVisibility() {
+        state.revealed.clear();
+        state.selected.clear();
+      }
+
+      function checkWin() {
+        const first = state.cups[0];
+        return state.cups.every(v => v === first);
+      }
+
+      function markWinIfNeeded() {
+        if (checkWin()) {
+          state.gameOver = true;
+          statusValue.textContent = 'Won';
+          log(`Turn ${state.turn}: all four glasses match. Victory.`);
+          render();
+          return true;
+        }
+        return false;
+      }
+
+      function handleGlassClick(slotIndex) {
+        if (state.gameOver) return;
+
+        const physIndex = physicalIndexFromSlot(slotIndex);
+        const alreadySelected = state.selected.has(physIndex);
+        const canTakeNewTouch = state.touchesUsed < 2;
+
+        if (!alreadySelected) {
+          if (!canTakeNewTouch) {
+            log(`Turn ${state.turn}: no touches left.`);
+            return;
+          }
+          state.selected.add(physIndex);
+          state.revealed.add(physIndex);
+          state.touchesUsed += 1;
+          log(`Turn ${state.turn}: inspected ${slotNames[slotIndex]} glass → ${textFor(state.cups[physIndex])}.`);
+          render();
+          return;
+        }
+
+        state.cups[physIndex] = state.cups[physIndex] === 0 ? 1 : 0;
+        state.revealed.add(physIndex);
+        log(`Turn ${state.turn}: flipped ${slotNames[slotIndex]} glass → ${textFor(state.cups[physIndex])}.`);
+        render();
+        markWinIfNeeded();
+      }
+
+      function endTurn() {
+        if (state.gameOver) return;
+
+        const completedTurn = state.turn;
+        const touched = [...state.selected].map(idx => idx + 1).join(', ') || 'none';
+        const spin = randInt(4);
+
+        clearTurnVisibility();
+        state.touchesUsed = 0;
+        state.turn += 1;
+        state.rotation = (state.rotation + spin) % 4;
+
+        board.classList.add('rotating');
+        render();
+
+        setTimeout(() => {
+          board.classList.remove('rotating');
+          log(`Turn ${completedTurn}: ended after touching ${touched}. The table rotated secretly.`);
+          render();
+          markWinIfNeeded();
+        }, 620);
+      }
+
+      function newGame() {
+        state.gameOver = false;
+        state.turn = 1;
+        state.rotation = 0;
+        state.touchesUsed = 0;
+        state.revealed.clear();
+        state.selected.clear();
+        logList.innerHTML = '';
+        shuffleInitialState();
+        log('New game started. Initial orientations are hidden.');
+        render();
+        console.assert(!checkWin(), 'Initial state must not be all the same orientation.');
+      }
+
+      function runSelfTests() {
+        const original = [0, 1, 1, 0];
+        const rotatedFour = rotateArray(original, 4);
+        console.assert(JSON.stringify(rotatedFour) === JSON.stringify(original), 'Four rotations should return to the original state.');
+      }
+
+      function rotateArray(arr, quarterTurnsClockwise) {
+        const r = ((quarterTurnsClockwise % 4) + 4) % 4;
+        const out = [];
+        for (let i = 0; i < 4; i++) {
+          out[i] = arr[(i - r + 4) % 4];
+        }
+        return out;
+      }
+
+      glassEls.forEach((el, slotIndex) => {
+        el.addEventListener('click', () => handleGlassClick(slotIndex));
+      });
+
+      endTurnBtn.addEventListener('click', endTurn);
+      newGameBtn.addEventListener('click', newGame);
+
+      runSelfTests();
+      newGame();
+      render();
+    })();
+  </script>
+</body>
+</html>
